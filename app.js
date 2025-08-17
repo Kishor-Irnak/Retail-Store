@@ -509,7 +509,7 @@ function addItemRow(product = null) {
                 <option value="">-- Select Product --</option>
                 ${products.map(p => `<option value="${p.id}" ${product?.id === p.id ? 'selected' : ''}>${p.name} (₹${p.price.toFixed(2)})</option>`).join('')}
             </select>
-            <input type="text" placeholder="Or enter custom item" class="item-name mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${product ? 'hidden' : ''}">
+            <input type="text" placeholder="Enter custom item" class="p-2 item-name mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${product ? 'hidden' : ''}">
         </div>
         <div class="col-span-2">
             <input type="number" placeholder="Qty" min="1" value="${product ? '1' : ''}" class="item-qty p-2 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
@@ -563,6 +563,17 @@ function addItemRow(product = null) {
 }
 
 addItemBtn.addEventListener('click', addItemRow);
+
+// Add after addItemBtn event listener
+const addMultipleBtn = document.createElement('button');
+addMultipleBtn.type = 'button';
+addMultipleBtn.textContent = 'Add Items';
+addMultipleBtn.className = 'bg-blue-500 text-white px-4 py-2 rounded ml-2 hover:bg-blue-700';
+addItemBtn.parentNode.insertBefore(addMultipleBtn, addItemBtn.nextSibling);
+
+addMultipleBtn.addEventListener('click', () => {
+    for (let i = 0; i < 1; i++) addItemRow();
+});
 
 function calculateTotal() {
     let total = 0;
