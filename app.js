@@ -505,17 +505,17 @@ function addItemRow(product = null) {
     row.className = 'item-row grid grid-cols-12 gap-2 mb-2';
     row.innerHTML = `
         <div class="col-span-5">
-            <select class="item-product w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <select class="item-product w-full rounded-md border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500">
                 <option value="">-- Select Product --</option>
                 ${products.map(p => `<option value="${p.id}" ${product?.id === p.id ? 'selected' : ''}>${p.name} (₹${p.price.toFixed(2)})</option>`).join('')}
             </select>
             <input type="text" placeholder="Or enter custom item" class="item-name mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 ${product ? 'hidden' : ''}">
         </div>
         <div class="col-span-2">
-            <input type="number" placeholder="Qty" min="1" value="${product ? '1' : ''}" class="item-qty w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <input type="number" placeholder="Qty" min="1" value="${product ? '1' : ''}" class="item-qty p-2 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
         </div>
         <div class="col-span-3">
-            <input type="number" placeholder="Price" min="0" step="0.01" value="${product ? product.price.toFixed(2) : ''}" class="item-price w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <input type="number" placeholder="Price" min="0" step="0.01" value="${product ? product.price.toFixed(2) : ''}" class="p-2 item-price w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
         </div>
         <div class="col-span-2 flex items-center">
             <button type="button" class="remove-item text-red-500 hover:text-red-700">
@@ -576,6 +576,7 @@ function calculateTotal() {
     saleTotal.textContent = total.toFixed(2);
 }
 
+// FIX: Only ONE salesForm submit handler!
 salesForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
@@ -591,17 +592,17 @@ salesForm.addEventListener('submit', (e) => {
     document.querySelectorAll('.item-row').forEach(row => {
         const productSelect = row.querySelector('.item-product');
         const productId = productSelect.value;
-        const name = productId ? 
-            products.find(p => p.id === productId)?.name : 
+        const name = productId ?
+            products.find(p => p.id === productId)?.name :
             row.querySelector('.item-name').value.trim();
         const qty = parseFloat(row.querySelector('.item-qty').value);
         const price = parseFloat(row.querySelector('.item-price').value);
-        
+
         if (!name || isNaN(qty) || isNaN(price)) {
             isValid = false;
             return;
         }
-        
+
         items.push({
             productId: productId || null,
             name,
@@ -610,15 +611,15 @@ salesForm.addEventListener('submit', (e) => {
             total: qty * price
         });
     });
-    
+
     if (!isValid || items.length === 0) {
         alert('Please fill all item details correctly');
         return;
     }
-    
+
     const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
     const saleId = database.ref().child('sales').push().key;
-    
+
     const saleData = {
         id: saleId,
         customerId,
@@ -628,7 +629,7 @@ salesForm.addEventListener('submit', (e) => {
         status: 'pending',
         createdAt: firebase.database.ServerValue.TIMESTAMP
     };
-    
+
     database.ref('sales/' + saleId).set(saleData)
         .then(() => {
             alert('Sale recorded successfully!');
@@ -644,8 +645,6 @@ salesForm.addEventListener('submit', (e) => {
         });
 });
 
-// Load Sales
-// Replace the loadSales() function with this updated version
 function loadSales() {
     database.ref('sales').on('value', (snapshot) => {
         sales = [];
@@ -681,7 +680,6 @@ function loadSales() {
     });
 }
 
-// Update the payment recording part in the paymentForm submit handler
 paymentForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
@@ -711,14 +709,8 @@ paymentForm.addEventListener('submit', (e) => {
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
     
-    // Initialize payments if it doesn't exist
-    const paymentRef = database.ref('sales/' + saleId + '/payments');
-    if (!sale.payments) {
-        paymentRef.set({});
-    }
-    
     // Add payment to sale
-    paymentRef.push(payment)
+    database.ref('sales/' + saleId + '/payments').push(payment)
         .then(() => {
             alert('Payment recorded successfully!');
             paymentModal.classList.add('hidden');
@@ -730,68 +722,8 @@ paymentForm.addEventListener('submit', (e) => {
         });
 });
 
-// Update the salesForm submit handler to ensure items is properly structured
-salesForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    const customerId = saleCustomer.value;
-    if (!customerId) {
-        alert('Please select a customer');
-        return;
-    }
-    
-    const items = [];
-    let isValid = true;
-    
-    document.querySelectorAll('.item-row').forEach(row => {
-        const name = row.querySelector('.item-name').value.trim();
-        const qty = parseFloat(row.querySelector('.item-qty').value);
-        const price = parseFloat(row.querySelector('.item-price').value);
-        
-        if (!name || isNaN(qty) || isNaN(price)) {
-            isValid = false;
-            return;
-        }
-        
-        items.push({
-            name,
-            qty,
-            price,
-            total: qty * price
-        });
-    });
-    
-    if (!isValid || items.length === 0) {
-        alert('Please fill all item details correctly');
-        return;
-    }
-    
-    const totalAmount = items.reduce((sum, item) => sum + item.total, 0);
-    const saleId = database.ref().child('sales').push().key;
-    
-    const saleData = {
-        id: saleId,
-        customerId,
-        items: items, // Ensure items is always an array
-        payments: {}, // Initialize payments as empty object
-        totalAmount,
-        status: 'pending',
-        createdAt: firebase.database.ServerValue.TIMESTAMP
-    };
-    
-    database.ref('sales/' + saleId).set(saleData)
-        .then(() => {
-            alert('Sale recorded successfully!');
-            salesForm.reset();
-            itemsContainer.innerHTML = '';
-            addItemRow();
-            saleTotal.textContent = '0.00';
-            loadSales();
-        })
-        .catch(error => {
-            console.error('Error recording sale:', error);
-            alert('Error recording sale. Please try again.');
-        });
+cancelPayment.addEventListener('click', () => {
+    paymentModal.classList.add('hidden');
 });
 
 function renderSalesList() {
@@ -880,7 +812,6 @@ function renderSalesList() {
 salesFilter.addEventListener('change', renderSalesList);
 searchSales.addEventListener('input', renderSalesList);
 
-// Payment Modal
 function openPaymentModal(sale) {
     const customer = customers.find(c => c.id === sale.customerId);
     
@@ -892,63 +823,14 @@ function openPaymentModal(sale) {
     paymentModal.classList.remove('hidden');
 }
 
-paymentForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    const saleId = paymentSaleId.value;
-    const amount = parseFloat(paymentAmount.value);
-    const date = paymentDate.value;
-    
-    if (!saleId || isNaN(amount) || amount <= 0 || !date) {
-        alert('Please enter valid payment details');
-        return;
-    }
-    
-    const sale = sales.find(s => s.id === saleId);
-    if (!sale) {
-        alert('Sale not found');
-        return;
-    }
-    
-    if (amount > sale.pendingAmount) {
-        alert('Payment amount cannot be more than pending amount');
-        return;
-    }
-    
-    const payment = {
-        amount,
-        date,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    };
-    
-    // Add payment to sale
-    database.ref('sales/' + saleId + '/payments').push(payment)
-        .then(() => {
-            alert('Payment recorded successfully!');
-            paymentModal.classList.add('hidden');
-            loadSales();
-        })
-        .catch(error => {
-            console.error('Error recording payment:', error);
-            alert('Error recording payment. Please try again.');
-        });
-});
-
-cancelPayment.addEventListener('click', () => {
-    paymentModal.classList.add('hidden');
-});
-
-// View Sale Details
 function viewSaleDetails(sale) {
     const customer = customers.find(c => c.id === sale.customerId);
-    
     let details = `
         <h4 class="font-medium mb-2">Sale Details</h4>
         <p><strong>Date:</strong> ${new Date(sale.createdAt).toLocaleString()}</p>
         <p><strong>Customer:</strong> ${customer ? customer.name : 'Unknown'}</p>
         <p><strong>Total Amount:</strong> ₹${sale.totalAmount.toFixed(2)}</p>
         <p><strong>Status:</strong> ${sale.status === 'paid' ? 'Paid' : 'Pending (₹' + sale.pendingAmount.toFixed(2) + ')'}</p>
-        
         <h4 class="font-medium mt-4 mb-2">Items</h4>
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
@@ -1009,7 +891,6 @@ function viewSaleDetails(sale) {
     alert(details, 'Sale Details');
 }
 
-// Helper function for styled alerts
 function alert(message, title = 'Alert') {
     const alertBox = document.createElement('div');
     alertBox.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
@@ -1022,9 +903,7 @@ function alert(message, title = 'Alert') {
             </div>
         </div>
     `;
-    
     document.body.appendChild(alertBox);
-    
     const okBtn = alertBox.querySelector('button');
     okBtn.addEventListener('click', () => {
         document.body.removeChild(alertBox);
